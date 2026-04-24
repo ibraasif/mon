@@ -4,19 +4,24 @@
 
 One Worker. One D1 table. One Vectorize index. Any AI tool that speaks MCP can plug in.
 
+
 **Deploy in under 5 minutes. $0 to run.**
 
 Live demo: https://mon.ibrahimasif.com
 
 ---
 
+## Why mon exists
+
+Most AI tools still treat memory as an add-on. mon makes memory a tiny, deployable primitive: ingest a thought, search it semantically, expose it over MCP, and plug it into any AI workflow.
+
 ## What it does
 
 - **Capture** a thought via `POST /ingest`
 - **Recall** semantically via `GET /search?q=`
-- **Expose** a `recall_memory` MCP tool so Claude, ChatGPT, Cursor, or any MCP-aware AI can query your memory
+- **Expose** a recall_memory MCP tool for MCP-compatible clients and agent runtimes.
 
-No Supabase. No Postgres. No middleware. Pure Cloudflare.
+No Supabase. No Postgres. Built natively on Cloudflare.
 
 ---
 
@@ -131,7 +136,7 @@ The `recall_memory` tool accepts a natural language query and returns relevant t
 
 ## License
 
-[FSL-1.1-MIT](./LICENSE.md) — free to use, modify, and self-host. Converts to MIT in 2 years.
+[FSL-1.1-MIT](./LICENSE.md) — Source-available under FSL-1.1-MIT; each release converts to MIT after 2 years.
 
 ---
 
