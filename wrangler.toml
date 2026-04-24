@@ -1,0 +1,15 @@
+name = "mon"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "mon-db"
+database_id = "REPLACE_WITH_YOUR_DATABASE_ID"
+
+[[vectorize]]
+binding = "VECTORIZE"
+index_name = "mon-index"
+
+[ai]
+binding = "AI"
