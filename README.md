@@ -90,10 +90,11 @@ That's it. Your memory endpoint is live.
 Store and embed a thought.
 
 ```bash
-curl -X POST https://mon.ibrahimasif.com/ingest \
+curl -X POST https://mon.your-domain.com/ingest \
   -H "Content-Type: application/json" \
   -d '{"text": "Your thought here."}'
 ```
+Replace mon.your-domain.com with your deployed Worker hostname (for example, mon.yourname.workers.dev or your custom domain).
 
 **Response**
 ```json
@@ -107,8 +108,9 @@ curl -X POST https://mon.ibrahimasif.com/ingest \
 Recall semantically similar thoughts.
 
 ```bash
-curl "https://mon.ibrahimasif.com/search?q=your+query"
+curl "https://mon.your-domain.com/search?q=your+query"
 ```
+Replace mon.your-domain.com with your deployed Worker hostname.
 
 **Response**
 ```json
@@ -128,10 +130,11 @@ curl "https://mon.ibrahimasif.com/search?q=your+query"
 
 ### MCP tool: `recall_memory`
 
-Point any MCP-compatible AI tool at: https://mon.ibrahimasif.com/mcp 
-
+Point any MCP-compatible AI tool at your mon MCP endpoint, for example:
+https://mon.your-domain.com/mcp
 The `recall_memory` tool accepts a natural language query and returns relevant thoughts from your memory store.
 
+The demo instance lives at https://mon.ibrahimasif.com/mcp, but in your own setup you should use your deployed Worker URL instead.
 ---
 
 ## License
