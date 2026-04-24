@@ -134,6 +134,7 @@ Replace mon.your-domain.com with your deployed Worker hostname.
 
 Point any MCP-compatible AI tool at your mon MCP endpoint, for example:
 https://mon.your-domain.com/mcp
+
 The `recall_memory` tool accepts a natural language query and returns relevant thoughts from your memory store.
 
 The demo instance lives at https://mon.ibrahimasif.com/mcp, but in your own setup you should use your deployed Worker URL instead.
