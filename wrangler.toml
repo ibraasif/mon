@@ -4,8 +4,8 @@ compatibility_date = "2024-01-01"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "mon-db"
-database_id = "REPLACE_WITH_YOUR_DATABASE_ID"
+database_name = "app-mon-db"
+database_id = "89717d93-ecc1-48a4-9192-1160bd79b2d6"
 
 [[vectorize]]
 binding = "VECTORIZE"
