@@ -9,6 +9,7 @@ One Worker. One D1 table. One Vectorize index. Any AI tool that speaks MCP can p
 
 Live demo: https://mon.ibrahimasif.com
 
+Use this only for trying mon out. For real usage, deploy your own instance and call your own Worker URL.
 ---
 
 ## Why mon exists
@@ -19,7 +20,7 @@ Most AI tools still treat memory as an add-on. mon makes memory a tiny, deployab
 
 - **Capture** a thought via `POST /ingest`
 - **Recall** semantically via `GET /search?q=`
-- **Expose** a recall_memory MCP tool for MCP-compatible clients and agent runtimes.
+- **Expose** a recall_memory MCP tool for MCP-compatible clients and agent runtimes (via your Worker’s /mcp endpoint).
 
 No Supabase. No Postgres. Built natively on Cloudflare.
 
@@ -79,7 +80,8 @@ wrangler d1 execute app-mon-db --file=schema.sql --remote
 wrangler deploy
 ```
 
-That's it. Your memory endpoint is live.
+That’s it. Your memory endpoint is live.
+You can find your Worker URL in the Cloudflare dashboard and use it as mon.your-domain.com in the examples below.
 
 ---
 
@@ -96,7 +98,7 @@ curl -X POST https://mon.your-domain.com/ingest \
 ```
 Replace mon.your-domain.com with your deployed Worker hostname (for example, mon.yourname.workers.dev or your custom domain).
 
-**Response**
+**Example Response**
 ```json
 { "id": "uuid", "status": "stored" }
 ```
@@ -112,7 +114,7 @@ curl "https://mon.your-domain.com/search?q=your+query"
 ```
 Replace mon.your-domain.com with your deployed Worker hostname.
 
-**Response**
+**Example Response**
 ```json
 {
   "results": [
