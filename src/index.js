@@ -16,6 +16,111 @@ export default {
     }
 };
 
+// ─── MCP Handler (JSON-RPC 2.0 over HTTP) ────────────────────────────────────
+
+async function handleMCP(request, env) {
+    // Claude.ai sends OPTIONS first (CORS preflight)
+    if (request.method === 'OPTIONS') {
+        return new Response(null, { status: 204, headers: corsHeaders() });
+    }
+
+    if (request.method !== 'POST') {
+        return json({ error: 'Method not allowed' }, 405);
+    }
+
+    let body;
+    try {
+        body = await request.json();
+    } catch {
+        return jsonRpcError(null, -32700, 'Parse error');
+    }
+
+    const { jsonrpc, id, method, params } = body;
+
+    if (jsonrpc !== '2.0') {
+        return jsonRpcError(id, -32600, 'Invalid Request: jsonrpc must be "2.0"');
+    }
+
+    switch (method) {
+        case 'initialize':
+            return jsonRpcResult(id, {
+                protocolVersion: '2024-11-05',
+                serverInfo: { name: 'mon', version: '0.0.1' },
+                capabilities: { tools: {} }
+            });
+
+        case 'notifications/initialized':
+            // Client acknowledgement — no response needed
+            return new Response(null, { status: 204, headers: corsHeaders() });
+
+        case 'tools/list':
+            return jsonRpcResult(id, {
+                tools: [{
+                    name: 'recall_memory',
+                    description: 'Search your personal memory store semantically.',
+                    inputSchema: {
+                        type: 'object',
+                        properties: {
+                            query: { type: 'string', description: 'Natural language query' }
+                        },
+                        required: ['query']
+                    }
+                },
+                {
+                    name: 'save_memory',
+                    description: 'Save a thought or piece of information to your memory store.',
+                    inputSchema: {
+                        type: 'object',
+                        properties: {
+                            text: { type: 'string', description: 'The thought or information to store' }
+                        },
+                        required: ['text']
+                    }
+                }]
+            });
+
+        case 'tools/call': {
+            const toolName = params?.name;
+            const toolInput = params?.arguments ?? {};
+
+            if (toolName === 'recall_memory') {
+                const { query } = toolInput;
+                if (!query) return jsonRpcError(id, -32602, 'Missing required argument: query');
+                const fakeUrl = new URL(request.url);
+                fakeUrl.pathname = '/search';
+                fakeUrl.searchParams.set('q', query);
+                const searchRes = await handleSearch(fakeUrl, env);
+                const data = await searchRes.json();
+                return jsonRpcResult(id, {
+                    content: [{ type: 'text', text: JSON.stringify(data, null, 2) }]
+                });
+            }
+
+            if (toolName === 'save_memory') {
+                const { text } = toolInput;
+                if (!text) return jsonRpcError(id, -32602, 'Missing required argument: text');
+                const fakeReq = new Request(request.url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text })
+                });
+                const ingestRes = await handleIngest(fakeReq, env);
+                const data = await ingestRes.json();
+                return jsonRpcResult(id, {
+                    content: [{ type: 'text', text: JSON.stringify(data, null, 2) }]
+                });
+            }
+
+            return jsonRpcError(id, -32601, `Unknown tool: ${toolName}`);
+        }
+
+        default:
+            return jsonRpcError(id, -32601, `Method not found: ${method}`);
+    }
+}
+
+// ─── Ingest & Search (unchanged) ─────────────────────────────────────────────
+
 async function handleIngest(request, env) {
     const { text } = await request.json();
     if (!text) return json({ error: 'text is required' }, 400);
@@ -55,46 +160,38 @@ async function handleSearch(url, env) {
     return json({ results });
 }
 
-async function handleMCP(request, env) {
-    if (request.method === 'GET') {
-        return json({
-            name: 'mon',
-            version: '0.0.1',
-            tools: [{
-                name: 'recall_memory',
-                description: 'Search your personal memory store semantically.',
-                inputSchema: {
-                    type: 'object',
-                    properties: {
-                        query: { type: 'string', description: 'Natural language query' }
-                    },
-                    required: ['query']
-                }
-            }]
-        });
-    }
-
-    if (request.method === 'POST') {
-        const body = await request.json();
-        if (body.tool === 'recall_memory') {
-            const fakeUrl = new URL(request.url);
-            fakeUrl.pathname = '/search';
-            fakeUrl.searchParams.set('q', body.input.query);
-            return handleSearch(fakeUrl, env);
-        }
-    }
-
-    return json({ error: 'not found' }, 404);
-}
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 async function embed(text, env) {
     const result = await env.AI.run('@cf/baai/bge-small-en-v1.5', { text: [text] });
     return result.data[0];
 }
 
+function corsHeaders() {
+    return {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
+    };
+}
+
 function json(data, status = 200) {
     return new Response(JSON.stringify(data), {
         status,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json', ...corsHeaders() }
+    });
+}
+
+function jsonRpcResult(id, result) {
+    return new Response(JSON.stringify({ jsonrpc: '2.0', id, result }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders() }
+    });
+}
+
+function jsonRpcError(id, code, message) {
+    return new Response(JSON.stringify({ jsonrpc: '2.0', id, error: { code, message } }), {
+        status: 200, // JSON-RPC errors still return HTTP 200
+        headers: { 'Content-Type': 'application/json', ...corsHeaders() }
     });
 }
