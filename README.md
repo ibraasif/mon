@@ -9,6 +9,7 @@ One Worker. One D1 table. One Vectorize index. Any AI tool that speaks MCP can p
 
 Live demo: https://mon.ibrahimasif.com
 
+Use this only for trying mon out. For real usage, deploy your own instance and call your own Worker URL.
 ---
 
 ## Why mon exists
@@ -19,7 +20,7 @@ Most AI tools still treat memory as an add-on. mon makes memory a tiny, deployab
 
 - **Capture** a thought via `POST /ingest`
 - **Recall** semantically via `GET /search?q=`
-- **Expose** a recall_memory MCP tool for MCP-compatible clients and agent runtimes.
+- **Expose** a recall_memory MCP tool for MCP-compatible clients and agent runtimes (via your Worker’s /mcp endpoint).
 
 No Supabase. No Postgres. Built natively on Cloudflare.
 
@@ -79,7 +80,8 @@ wrangler d1 execute app-mon-db --file=schema.sql --remote
 wrangler deploy
 ```
 
-That's it. Your memory endpoint is live.
+That’s it. Your memory endpoint is live.
+You can find your Worker URL in the Cloudflare dashboard and use it as mon.your-domain.com in the examples below.
 
 ---
 
@@ -90,12 +92,13 @@ That's it. Your memory endpoint is live.
 Store and embed a thought.
 
 ```bash
-curl -X POST https://mon.ibrahimasif.com/ingest \
+curl -X POST https://mon.your-domain.com/ingest \
   -H "Content-Type: application/json" \
   -d '{"text": "Your thought here."}'
 ```
+Replace mon.your-domain.com with your deployed Worker hostname (for example, mon.yourname.workers.dev or your custom domain).
 
-**Response**
+**Example Response**
 ```json
 { "id": "uuid", "status": "stored" }
 ```
@@ -107,10 +110,11 @@ curl -X POST https://mon.ibrahimasif.com/ingest \
 Recall semantically similar thoughts.
 
 ```bash
-curl "https://mon.ibrahimasif.com/search?q=your+query"
+curl "https://mon.your-domain.com/search?q=your+query"
 ```
+Replace mon.your-domain.com with your deployed Worker hostname.
 
-**Response**
+**Example Response**
 ```json
 {
   "results": [
@@ -128,10 +132,12 @@ curl "https://mon.ibrahimasif.com/search?q=your+query"
 
 ### MCP tool: `recall_memory`
 
-Point any MCP-compatible AI tool at: https://mon.ibrahimasif.com/mcp 
+Point any MCP-compatible AI tool at your mon MCP endpoint, for example:
+https://mon.your-domain.com/mcp
 
 The `recall_memory` tool accepts a natural language query and returns relevant thoughts from your memory store.
 
+The demo instance lives at https://mon.ibrahimasif.com/mcp, but in your own setup you should use your deployed Worker URL instead.
 ---
 
 ## License
