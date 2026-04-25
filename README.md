@@ -4,12 +4,8 @@
 
 One Worker. One D1 table. One Vectorize index. Any AI tool that speaks MCP can plug in.
 
-
 **Deploy in under 5 minutes. $0 to run.**
 
-Live demo: https://mon.ibrahimasif.com
-
-Use this only for trying mon out. For real usage, deploy your own instance and call your own Worker URL.
 ---
 
 ## Why mon exists
@@ -20,7 +16,7 @@ Most AI tools still treat memory as an add-on. mon makes memory a tiny, deployab
 
 - **Capture** a thought via `POST /ingest`
 - **Recall** semantically via `GET /search?q=`
-- **Expose** a recall_memory MCP tool for MCP-compatible clients and agent runtimes (via your Worker’s /mcp endpoint).
+- **Expose** `recall_memory` and `save_memory` MCP tools for MCP-compatible clients and agent runtimes (via your Worker's `/mcp` endpoint).
 
 No Supabase. No Postgres. Built natively on Cloudflare.
 
@@ -74,18 +70,29 @@ wrangler vectorize create mon-index --dimensions=384 --metric=cosine
 wrangler d1 execute app-mon-db --file=schema.sql --remote
 ```
 
-### 6. Deploy
+### 6. Set auth token
+
+mon protects all endpoints with a bearer token. Set it as a Wrangler secret — never hardcode it:
+
+```bash
+wrangler secret put AUTH_TOKEN
+```
+
+You'll be prompted to enter the token value. Use a strong random string (e.g. a UUID or 32+ character random value).
+
+### 7. Deploy
 
 ```bash
 wrangler deploy
 ```
 
-That’s it. Your memory endpoint is live.
-You can find your Worker URL in the Cloudflare dashboard and use it as mon.your-domain.com in the examples below.
+That's it. Your memory endpoint is live at your Worker URL.
 
 ---
 
 ## API
+
+All endpoints require `Authorization: Bearer <your-token>`.
 
 ### `POST /ingest`
 
@@ -94,11 +101,11 @@ Store and embed a thought.
 ```bash
 curl -X POST https://mon.your-domain.com/ingest \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <your-token>" \
   -d '{"text": "Your thought here."}'
 ```
-Replace mon.your-domain.com with your deployed Worker hostname (for example, mon.yourname.workers.dev or your custom domain).
 
-**Example Response**
+**Response**
 ```json
 { "id": "uuid", "status": "stored" }
 ```
@@ -110,11 +117,11 @@ Replace mon.your-domain.com with your deployed Worker hostname (for example, mon
 Recall semantically similar thoughts.
 
 ```bash
-curl "https://mon.your-domain.com/search?q=your+query"
+curl "https://mon.your-domain.com/search?q=your+query" \
+  -H "Authorization: Bearer <your-token>"
 ```
-Replace mon.your-domain.com with your deployed Worker hostname.
 
-**Example Response**
+**Response**
 ```json
 {
   "results": [
@@ -130,14 +137,61 @@ Replace mon.your-domain.com with your deployed Worker hostname.
 
 ---
 
-### MCP tool: `recall_memory`
+## MCP
 
-Point any MCP-compatible AI tool at your mon MCP endpoint, for example:
-https://mon.your-domain.com/mcp
+mon exposes two MCP tools over a single `/mcp` endpoint using the [MCP Streamable HTTP transport](https://modelcontextprotocol.io/specification/2025-03-26/basic/transports) (JSON-RPC 2.0). All MCP requests require the same bearer token.
 
-The `recall_memory` tool accepts a natural language query and returns relevant thoughts from your memory store.
+| Tool | Description |
+|---|---|
+| `recall_memory` | Semantic search over your stored thoughts |
+| `save_memory` | Store a new thought or piece of information |
 
-The demo instance lives at https://mon.ibrahimasif.com/mcp, but in your own setup you should use your deployed Worker URL instead.
+### Client compatibility
+
+| Client | Status | Notes |
+|---|---|---|
+| claude.ai (web) | ✅ Working | Streamable HTTP + bearer token header |
+| Claude Desktop | ✅ Working | Via `mcp-remote` stdio bridge |
+| Perplexity | ❌ Not supported | Requires persistent SSE — incompatible with Cloudflare Workers |
+
+### claude.ai
+
+1. Go to **Settings → Integrations → Add custom connector**
+2. URL: `https://mon.your-domain.com/mcp`
+3. Transport: **Streamable HTTP**
+4. Authentication: **API Key** → add header `Authorization: Bearer <your-token>`
+
+### Claude Desktop
+
+Claude Desktop uses stdio, not HTTP. Use [`mcp-remote`](https://github.com/geelen/mcp-remote) as a bridge.
+
+Add to your `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "mon": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://mon.your-domain.com/mcp",
+        "--header",
+        "Authorization: Bearer <your-token>"
+      ]
+    }
+  }
+}
+```
+
+Config file locations:
+- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+
+### Why not Perplexity?
+
+Perplexity's Streamable HTTP client opens a persistent GET SSE stream after `initialize` for server-to-client notifications. Cloudflare Workers terminate long-lived connections — making this architecturally incompatible without [Durable Objects](https://developers.cloudflare.com/durable-objects/). PRs welcome.
+
 ---
 
 ## License
